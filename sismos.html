@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Secuencia Sísmica — II Región de Antofagasta 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#e8f0f8;overflow:hidden;font-family:sans-serif}
+  #wrap{position:relative;width:100vw;height:100vh}
+  #map{width:100%;height:100%}
+  #topbar{position:absolute;top:10px;left:10px;right:10px;z-index:1000;
+    background:rgba(5,8,18,0.90);border:1px solid #1a3050;border-radius:9px;
+    padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  #topbar h1{font-size:14px;font-weight:700;color:#e0f0ff;white-space:nowrap}
+  #topbar p{font-size:9px;color:#3a5070;margin-top:1px}
+  #stats{display:flex;gap:16px;flex-shrink:0}
+  .sc{text-align:center}
+  .sl{font-size:9px;color:#3a5070}
+  .sv{font-size:18px;font-weight:700}
+  #infopanel{position:absolute;top:78px;right:10px;z-index:1000;
+    background:rgba(5,8,18,0.91);border:1px solid #1a3050;border-radius:9px;
+    padding:11px 14px;min-width:195px;max-width:230px}
+  #im{font-size:24px;font-weight:700;line-height:1.1}
+  #ip{font-size:12px;color:#6090b0;margin-top:4px;line-height:1.35}
+  #id2{font-size:10px;color:#304d66;margin-top:3px}
+  #bottombar{position:absolute;bottom:0;left:0;right:0;z-index:1000;
+    background:rgba(5,8,18,0.94);border-top:1px solid #1a3050;padding:9px 16px}
+  #ctrlrow{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  #playbtn{background:#0d2540;border:1.5px solid #2563eb;color:#93c5fd;
+    border-radius:7px;padding:8px 26px;font-size:15px;font-weight:700;
+    cursor:pointer;flex-shrink:0;transition:background .15s}
+  #playbtn:hover{background:#1e3a8a}
+  #slider{flex:1;accent-color:#2563eb;cursor:pointer}
+  #tlabel{font-size:10px;color:#304d66;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  #legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .li{font-size:10px;color:#3a5070;display:flex;align-items:center;gap:4px}
+  .ld{border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,0.15)}
+  .qbubble{border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,0.6);transition:transform .15s}
+  .qbubble:hover{transform:scale(1.15);cursor:pointer}
+  #srcnote{position:absolute;bottom:80px;right:10px;z-index:1000;
+    background:rgba(5,8,18,0.75);border:1px solid #1a3050;border-radius:6px;
+    padding:5px 9px;font-size:9px;color:#3a5070}
+  #srcnote a{color:#4a80b0;text-decoration:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="map"></div>
+  <div id="topbar">
+    <div>
+      <h1>🌋 Secuencia sísmica — II Región de Antofagasta - Patricio Vega</h1>
+      <p>25–26 mayo 2026 · Fuente: Centro Sismológico Nacional (CSN) · Mapa: OpenStreetMap</p>
+    </div>
+    <div id="stats">
+      <div class="sc"><div class="sl">Principal</div><div class="sv" style="color:#b87333" id="s0">—</div></div>
+      <div class="sc"><div class="sl">Eventos</div><div class="sv" style="color:#60a5fa" id="s1">—</div></div>
+      <div class="sc"><div class="sl">Calama</div><div class="sv" style="color:#3b82f6" id="s2">—</div></div>
+      <div class="sc"><div class="sl">Otras zonas</div><div class="sv" style="color:#f97316" id="s3">—</div></div>
+    </div>
+  </div>
+  <div id="infopanel">
+    <div id="im" style="color:#b87333">— —</div>
+    <div id="ip">Presiona ▶ para iniciar la animación</div>
+    <div id="id2">—</div>
+  </div>
+  <div id="srcnote">
+    📡 <a href="https://www.sismologia.cl" target="_blank">sismologia.cl</a> · 
+    🗺 <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>
+  </div>
+  <div id="bottombar">
+    <div id="ctrlrow">
+      <button id="playbtn">▶ Reproducir</button>
+      <input type="range" id="slider" min="0" max="100" value="0" step="1"/>
+      <span id="tlabel">← arrastra el slider o presiona ▶ para animar</span>
+    </div>
+    <div id="legend">
+      <span class="li"><span class="ld" style="width:10px;height:10px;background:#22c55e"></span>2.5–3.0 verde</span>
+      <span class="li"><span class="ld" style="width:12px;height:12px;background:#3b82f6"></span>3.0–4.0 azul</span>
+      <span class="li"><span class="ld" style="width:15px;height:15px;background:#f97316"></span>4.0–5.0 naranja</span>
+      <span class="li"><span class="ld" style="width:17px;height:17px;background:#39ff14;border-color:#28cc00"></span>5.0–6.0 neón</span>
+      <span class="li"><span class="ld" style="width:21px;height:21px;background:#b87333;border-color:#d4956a"></span>&gt;6.0 cobre</span>
+      <span style="margin-left:10px;font-size:10px;color:#304d66">Espacio=play/pause · ← → navegar</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── JSON embebido directamente (sin fetch, sin CORS) ──────────────────────────
+const DATA = {
+  "metadata": {
+    "titulo": "Secuencia sísmica II Región de Antofagasta",
+    "fecha_inicio": "2026-05-25T06:27:00",
+    "fecha_fin": "2026-05-26T08:30:00",
+    "fuente": "Centro Sismológico Nacional (CSN) - Universidad de Chile",
+    "url_fuente": [
+      "https://www.sismologia.cl/sismicidad/catalogo/2026/05/20260525.html",
+      "https://www.sismologia.cl/sismicidad/catalogo/2026/05/20260526.html"
+    ]
+  },
+  "sismos": [
+    {"id":1,  "fecha_local":"2026-05-25T06:27:00","magnitud":2.5,"tipo":"Mlv","lat":-22.243,"lon":-68.683,"profundidad_km":112,"lugar":"36 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":2,  "fecha_local":"2026-05-25T07:15:00","magnitud":4.1,"tipo":"Mlv","lat":-20.608,"lon":-69.163,"profundidad_km":115,"lugar":"22 km al SE de Pica","zona":"pica","es_principal":false},
+    {"id":3,  "fecha_local":"2026-05-25T09:32:00","magnitud":2.5,"tipo":"Mlv","lat":-19.991,"lon":-69.340,"profundidad_km":89, "lugar":"55 km al NE de Pozo Almonte","zona":"pica","es_principal":false},
+    {"id":4,  "fecha_local":"2026-05-25T10:01:00","magnitud":2.5,"tipo":"Mlv","lat":-21.196,"lon":-68.869,"profundidad_km":106,"lugar":"47 km al SO de Mina Collahuasi","zona":"collahuasi","es_principal":false},
+    {"id":5,  "fecha_local":"2026-05-25T12:49:00","magnitud":3.0,"tipo":"Mlv","lat":-20.861,"lon":-69.077,"profundidad_km":112,"lugar":"44 km al O de Mina Collahuasi","zona":"collahuasi","es_principal":false},
+    {"id":6,  "fecha_local":"2026-05-25T13:09:00","magnitud":2.5,"tipo":"Mlv","lat":-20.989,"lon":-68.558,"profundidad_km":132,"lugar":"21 km al SE de Mina Collahuasi","zona":"collahuasi","es_principal":false},
+    {"id":7,  "fecha_local":"2026-05-25T17:37:00","magnitud":3.1,"tipo":"Mlv","lat":-19.994,"lon":-69.226,"profundidad_km":101,"lugar":"56 km al N de Pica","zona":"pica","es_principal":false},
+    {"id":8,  "fecha_local":"2026-05-25T17:52:00","magnitud":6.9,"tipo":"Mww","lat":-22.380,"lon":-68.760,"profundidad_km":114,"lugar":"20 km al NE de Calama","zona":"calama","es_principal":true},
+    {"id":9,  "fecha_local":"2026-05-25T18:03:00","magnitud":4.3,"tipo":"Mlv","lat":-22.382,"lon":-68.856,"profundidad_km":106,"lugar":"12 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":10, "fecha_local":"2026-05-25T18:08:00","magnitud":4.2,"tipo":"Mlv","lat":-22.228,"lon":-68.671,"profundidad_km":112,"lugar":"38 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":11, "fecha_local":"2026-05-25T18:11:00","magnitud":3.9,"tipo":"Mlv","lat":-22.369,"lon":-68.747,"profundidad_km":112,"lugar":"22 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":12, "fecha_local":"2026-05-25T18:14:00","magnitud":3.4,"tipo":"Mlv","lat":-22.441,"lon":-68.739,"profundidad_km":106,"lugar":"20 km al E de Calama","zona":"calama","es_principal":false},
+    {"id":13, "fecha_local":"2026-05-25T18:20:00","magnitud":3.4,"tipo":"Mlv","lat":-22.303,"lon":-68.716,"profundidad_km":103,"lugar":"29 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":14, "fecha_local":"2026-05-25T18:38:00","magnitud":3.0,"tipo":"Mlv","lat":-22.417,"lon":-68.780,"profundidad_km":107,"lugar":"16 km al E de Calama","zona":"calama","es_principal":false},
+    {"id":15, "fecha_local":"2026-05-25T18:42:00","magnitud":2.7,"tipo":"Mlv","lat":-22.232,"lon":-68.738,"profundidad_km":107,"lugar":"33 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":16, "fecha_local":"2026-05-25T18:42:00","magnitud":2.9,"tipo":"Mlv","lat":-22.311,"lon":-68.909,"profundidad_km":112,"lugar":"18 km al N de Calama","zona":"calama","es_principal":false},
+    {"id":17, "fecha_local":"2026-05-25T18:45:00","magnitud":2.8,"tipo":"Mlv","lat":-21.489,"lon":-68.432,"profundidad_km":136,"lugar":"35 km al SO de Ollagüe","zona":"calama","es_principal":false},
+    {"id":18, "fecha_local":"2026-05-25T18:52:00","magnitud":2.5,"tipo":"Mlv","lat":-22.215,"lon":-68.753,"profundidad_km":111,"lugar":"34 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":19, "fecha_local":"2026-05-25T18:57:00","magnitud":2.7,"tipo":"Mlv","lat":-22.337,"lon":-68.766,"profundidad_km":107,"lugar":"22 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":20, "fecha_local":"2026-05-25T19:09:00","magnitud":2.8,"tipo":"Mlv","lat":-22.379,"lon":-68.804,"profundidad_km":112,"lugar":"16 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":21, "fecha_local":"2026-05-25T19:12:00","magnitud":3.3,"tipo":"Mlv","lat":-22.267,"lon":-68.925,"profundidad_km":120,"lugar":"23 km al N de Calama","zona":"calama","es_principal":false},
+    {"id":22, "fecha_local":"2026-05-25T19:25:00","magnitud":2.7,"tipo":"Mlv","lat":-22.382,"lon":-68.796,"profundidad_km":109,"lugar":"17 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":23, "fecha_local":"2026-05-25T19:40:00","magnitud":3.6,"tipo":"Mlv","lat":-22.238,"lon":-68.753,"profundidad_km":113,"lugar":"32 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":24, "fecha_local":"2026-05-25T19:41:00","magnitud":3.2,"tipo":"Mlv","lat":-22.340,"lon":-68.683,"profundidad_km":108,"lugar":"29 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":25, "fecha_local":"2026-05-25T19:56:00","magnitud":3.4,"tipo":"Mlv","lat":-22.323,"lon":-68.823,"profundidad_km":116,"lugar":"20 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":26, "fecha_local":"2026-05-25T19:59:00","magnitud":3.1,"tipo":"Mlv","lat":-22.280,"lon":-68.816,"profundidad_km":115,"lugar":"24 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":27, "fecha_local":"2026-05-25T20:12:00","magnitud":3.1,"tipo":"Mlv","lat":-22.428,"lon":-68.753,"profundidad_km":98, "lugar":"19 km al E de Calama","zona":"calama","es_principal":false},
+    {"id":28, "fecha_local":"2026-05-25T20:20:00","magnitud":3.9,"tipo":"Mlv","lat":-22.273,"lon":-68.789,"profundidad_km":113,"lugar":"26 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":29, "fecha_local":"2026-05-25T20:26:00","magnitud":2.7,"tipo":"Mlv","lat":-20.624,"lon":-69.093,"profundidad_km":95, "lugar":"29 km al SE de Pica","zona":"pica","es_principal":false},
+    {"id":30, "fecha_local":"2026-05-25T20:42:00","magnitud":2.5,"tipo":"Mlv","lat":-21.057,"lon":-68.965,"profundidad_km":106,"lugar":"41 km al SO de Mina Collahuasi","zona":"collahuasi","es_principal":false},
+    {"id":31, "fecha_local":"2026-05-25T20:46:00","magnitud":3.1,"tipo":"Mlv","lat":-22.448,"lon":-68.768,"profundidad_km":108,"lugar":"17 km al E de Calama","zona":"calama","es_principal":false},
+    {"id":32, "fecha_local":"2026-05-25T21:02:00","magnitud":2.7,"tipo":"Mlv","lat":-22.393,"lon":-68.987,"profundidad_km":119,"lugar":"10 km al NO de Calama","zona":"calama","es_principal":false},
+    {"id":33, "fecha_local":"2026-05-25T21:16:00","magnitud":2.7,"tipo":"Mlv","lat":-22.385,"lon":-68.728,"profundidad_km":106,"lugar":"23 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":34, "fecha_local":"2026-05-25T21:24:00","magnitud":2.7,"tipo":"Mlv","lat":-22.424,"lon":-68.749,"profundidad_km":102,"lugar":"19 km al E de Calama","zona":"calama","es_principal":false},
+    {"id":35, "fecha_local":"2026-05-25T21:34:00","magnitud":2.8,"tipo":"Mlv","lat":-22.452,"lon":-68.654,"profundidad_km":93, "lugar":"28 km al E de Calama","zona":"calama","es_principal":false},
+    {"id":36, "fecha_local":"2026-05-25T21:38:00","magnitud":3.2,"tipo":"Mlv","lat":-22.396,"lon":-68.799,"profundidad_km":110,"lugar":"16 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":37, "fecha_local":"2026-05-25T21:45:00","magnitud":2.5,"tipo":"Mlv","lat":-23.418,"lon":-69.164,"profundidad_km":80, "lugar":"61 km al S de Sierra Gorda","zona":"sierragorda","es_principal":false},
+    {"id":38, "fecha_local":"2026-05-25T21:57:00","magnitud":2.9,"tipo":"Mlv","lat":-20.131,"lon":-69.177,"profundidad_km":93, "lugar":"43 km al NE de Pica","zona":"pica","es_principal":false},
+    {"id":39, "fecha_local":"2026-05-25T22:08:00","magnitud":2.8,"tipo":"Mlv","lat":-21.302,"lon":-70.260,"profundidad_km":41, "lugar":"55 km al S de Patache","zona":"calama","es_principal":false},
+    {"id":40, "fecha_local":"2026-05-25T22:10:00","magnitud":2.5,"tipo":"Mlv","lat":-22.252,"lon":-68.710,"profundidad_km":113,"lugar":"33 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":41, "fecha_local":"2026-05-25T22:20:00","magnitud":2.9,"tipo":"Mlv","lat":-22.289,"lon":-68.768,"profundidad_km":112,"lugar":"26 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":42, "fecha_local":"2026-05-25T22:25:00","magnitud":3.7,"tipo":"Mlv","lat":-22.230,"lon":-68.860,"profundidad_km":116,"lugar":"28 km al N de Calama","zona":"calama","es_principal":false},
+    {"id":43, "fecha_local":"2026-05-25T22:47:00","magnitud":3.9,"tipo":"Mlv","lat":-22.204,"lon":-68.848,"profundidad_km":114,"lugar":"31 km al N de Calama","zona":"calama","es_principal":false},
+    {"id":44, "fecha_local":"2026-05-25T23:00:00","magnitud":2.9,"tipo":"Mlv","lat":-21.763,"lon":-68.441,"profundidad_km":130,"lugar":"63 km al S de Ollagüe","zona":"calama","es_principal":false},
+    {"id":45, "fecha_local":"2026-05-25T23:10:00","magnitud":3.8,"tipo":"Mlv","lat":-22.266,"lon":-68.753,"profundidad_km":109,"lugar":"29 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":46, "fecha_local":"2026-05-25T23:22:00","magnitud":2.5,"tipo":"Mlv","lat":-22.594,"lon":-68.699,"profundidad_km":87, "lugar":"27 km al SE de Calama","zona":"calama","es_principal":false},
+    {"id":47, "fecha_local":"2026-05-25T23:37:00","magnitud":2.8,"tipo":"Mlv","lat":-22.176,"lon":-68.983,"profundidad_km":106,"lugar":"33 km al N de Calama","zona":"calama","es_principal":false},
+    {"id":48, "fecha_local":"2026-05-26T00:38:00","magnitud":2.8,"tipo":"Mlv","lat":-21.391,"lon":-68.514,"profundidad_km":115,"lugar":"33 km al SO de Ollagüe","zona":"calama","es_principal":false},
+    {"id":49, "fecha_local":"2026-05-26T01:00:00","magnitud":3.1,"tipo":"Mlv","lat":-24.815,"lon":-69.012,"profundidad_km":99, "lugar":"61 km al S de Mina La Escondida","zona":"escondida","es_principal":false},
+    {"id":50, "fecha_local":"2026-05-26T01:12:00","magnitud":2.7,"tipo":"Mlv","lat":-22.232,"lon":-68.683,"profundidad_km":112,"lugar":"37 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":51, "fecha_local":"2026-05-26T01:48:00","magnitud":2.6,"tipo":"Mlv","lat":-22.249,"lon":-68.893,"profundidad_km":113,"lugar":"25 km al N de Calama","zona":"calama","es_principal":false},
+    {"id":52, "fecha_local":"2026-05-26T02:04:00","magnitud":2.5,"tipo":"Mlv","lat":-22.294,"lon":-68.768,"profundidad_km":109,"lugar":"26 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":53, "fecha_local":"2026-05-26T02:47:00","magnitud":2.6,"tipo":"Mlv","lat":-22.385,"lon":-68.759,"profundidad_km":106,"lugar":"20 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":54, "fecha_local":"2026-05-26T03:02:00","magnitud":2.5,"tipo":"Mlv","lat":-22.314,"lon":-68.716,"profundidad_km":110,"lugar":"28 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":55, "fecha_local":"2026-05-26T03:20:00","magnitud":3.0,"tipo":"Mlv","lat":-22.876,"lon":-68.414,"profundidad_km":103,"lugar":"22 km al O de San Pedro de Atacama","zona":"calama","es_principal":false},
+    {"id":56, "fecha_local":"2026-05-26T03:56:00","magnitud":2.7,"tipo":"Mlv","lat":-22.396,"lon":-68.744,"profundidad_km":106,"lugar":"21 km al E de Calama","zona":"calama","es_principal":false},
+    {"id":57, "fecha_local":"2026-05-26T03:58:00","magnitud":2.6,"tipo":"Mlv","lat":-22.311,"lon":-68.723,"profundidad_km":108,"lugar":"28 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":58, "fecha_local":"2026-05-26T04:49:00","magnitud":3.2,"tipo":"Mlv","lat":-22.311,"lon":-68.723,"profundidad_km":109,"lugar":"28 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":59, "fecha_local":"2026-05-26T05:24:00","magnitud":2.7,"tipo":"Mlv","lat":-22.396,"lon":-68.774,"profundidad_km":110,"lugar":"18 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":60, "fecha_local":"2026-05-26T05:46:00","magnitud":3.1,"tipo":"Mlv","lat":-22.362,"lon":-68.698,"profundidad_km":109,"lugar":"27 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":61, "fecha_local":"2026-05-26T06:06:00","magnitud":2.9,"tipo":"Mlv","lat":-21.091,"lon":-68.076,"profundidad_km":153,"lugar":"24 km al NE de Ollagüe","zona":"calama","es_principal":false},
+    {"id":62, "fecha_local":"2026-05-26T06:13:00","magnitud":2.6,"tipo":"Mlv","lat":-21.309,"lon":-68.203,"profundidad_km":152,"lugar":"11 km al SE de Ollagüe","zona":"calama","es_principal":false},
+    {"id":63, "fecha_local":"2026-05-26T06:15:00","magnitud":2.6,"tipo":"Mlv","lat":-22.311,"lon":-68.793,"profundidad_km":108,"lugar":"23 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":64, "fecha_local":"2026-05-26T06:35:00","magnitud":2.5,"tipo":"Mlv","lat":-22.311,"lon":-68.843,"profundidad_km":109,"lugar":"20 km al NE de Calama","zona":"calama","es_principal":false},
+    {"id":65, "fecha_local":"2026-05-26T08:30:00","magnitud":3.2,"tipo":"Mlv","lat":-22.221,"lon":-68.657,"profundidad_km":110,"lugar":"39 km al NE de Calama","zona":"calama","es_principal":false}
+  ]
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function mCol(m){
+  if(m>=6)  return{f:'#b87333',s:'#8b5e2a',txt:'#fff'};
+  if(m>=5)  return{f:'#39ff14',s:'#1ea800',txt:'#003'};
+  if(m>=4)  return{f:'#f97316',s:'#c45a00',txt:'#fff'};
+  if(m>=3)  return{f:'#3b82f6',s:'#1d4ed8',txt:'#fff'};
+  return         {f:'#22c55e',s:'#15803d',txt:'#fff'};
+}
+function mSize(m){
+  if(m>=6.5)return 56; if(m>=5)return 40; if(m>=4.5)return 34;
+  if(m>=4)return 30;   if(m>=3.5)return 26; if(m>=3)return 22;
+  return 18;
+}
+function makeIcon(q){
+  const{f,s,txt}=mCol(q.magnitud);
+  const sz=mSize(q.magnitud);
+  const fs=q.magnitud>=6.5?15:q.magnitud>=4?11:9;
+  const bdr=q.es_principal?`3px solid #fff`:`2px solid ${s}`;
+  const shd=q.es_principal
+    ?`0 0 14px 5px rgba(184,115,51,0.75),0 2px 8px rgba(0,0,0,0.55)`
+    :`0 2px 6px rgba(0,0,0,0.35)`;
+  return L.divIcon({
+    className:'',
+    html:`<div class="qbubble" style="width:${sz}px;height:${sz}px;background:${f};border:${bdr};box-shadow:${shd};font-size:${fs}px;color:${txt}">${q.magnitud.toFixed(1)}</div>`,
+    iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2]
+  });
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+const Q=DATA.sismos;
+const principal=Q.find(q=>q.es_principal);
+document.getElementById('s0').textContent=principal?principal.magnitud.toFixed(1):'—';
+document.getElementById('s1').textContent=Q.length;
+document.getElementById('s2').textContent=Q.filter(q=>q.zona==='calama').length;
+document.getElementById('s3').textContent=Q.filter(q=>q.zona!=='calama').length;
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+const lats=Q.map(q=>q.lat), lons=Q.map(q=>q.lon);
+const bounds=[[Math.min(...lats)-0.4,Math.min(...lons)-0.5],[Math.max(...lats)+0.4,Math.max(...lons)+0.5]];
+const map=L.map('map',{zoomControl:true,attributionControl:true}).fitBounds(bounds);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19,
+  attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+// ── Markers ───────────────────────────────────────────────────────────────────
+const markers=[];
+Q.forEach(q=>{
+  const{f}=mCol(q.magnitud);
+  const zona={calama:'Calama',pica:'Pica',collahuasi:'Mina Collahuasi',
+    sierragorda:'Sierra Gorda',escondida:'Mina La Escondida'}[q.zona]||q.zona;
+  const mk=L.marker([q.lat,q.lon],{icon:makeIcon(q)});
+  mk.bindPopup(`
+    <div style="background:#060a12;color:#c0d8f0;padding:10px 12px;border-radius:7px;
+        font-family:sans-serif;min-width:170px;line-height:1.6">
+      <b style="color:${f};font-size:18px">M${q.magnitud.toFixed(1)} ${q.tipo}</b>
+      ${q.es_principal?'<span style="background:#b87333;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;margin-left:5px;vertical-align:middle">PRINCIPAL</span>':''}
+      <br><span style="font-size:12px">${q.lugar}</span><br>
+      <span style="font-size:10px;color:#3d5a7a">
+        🕐 ${q.fecha_local.replace('T',' ').slice(0,16)}<br>
+        📍 ${q.lat.toFixed(3)}, ${q.lon.toFixed(3)}<br>
+        ⬇ Profundidad: ${q.profundidad_km} km<br>
+        📌 Zona: ${zona}
+      </span>
+    </div>`
+  );
+  markers.push(mk);
+});
+
+// ── Animation ─────────────────────────────────────────────────────────────────
+let step=0, playing=false, timer=null;
+
+function updatePanel(q){
+  const{f}=mCol(q.magnitud);
+  document.getElementById('im').textContent=`M${q.magnitud.toFixed(1)} ${q.tipo}`;
+  document.getElementById('im').style.color=f;
+  document.getElementById('ip').textContent=q.lugar.length>42?q.lugar.slice(0,41)+'…':q.lugar;
+  document.getElementById('id2').textContent=
+    q.fecha_local.replace('T',' ').slice(0,16)+' · Prof: '+q.profundidad_km+' km';
+}
+
+function showStep(idx){
+  step=Math.min(Math.max(idx,0),Q.length-1);
+  document.getElementById('slider').value=Math.round((step/(Q.length-1))*100);
+  Q.forEach((_,i)=>{
+    i<=step ? (!map.hasLayer(markers[i])&&markers[i].addTo(map))
+            : (map.hasLayer(markers[i])&&map.removeLayer(markers[i]));
+  });
+  const q=Q[step];
+  document.getElementById('tlabel').textContent=
+    q.fecha_local.replace('T',' ').slice(0,16)+' · '+q.lugar;
+  updatePanel(q);
+  if(q.es_principal) animatePulse(markers[step],q.magnitud);
+}
+
+function animatePulse(mk,mag){
+  const{f}=mCol(mag);
+  const el=mk.getElement();
+  if(!el)return;
+  const inner=el.querySelector('.qbubble');
+  if(!inner)return;
+  let n=0;
+  const iv=setInterval(()=>{
+    inner.style.transform=n%2===0?'scale(1.4)':'scale(1.0)';
+    inner.style.boxShadow=n%2===0
+      ?`0 0 22px 9px ${f}99,0 2px 10px rgba(0,0,0,0.5)`
+      :`0 0 12px 4px ${f}55`;
+    if(++n>10)clearInterval(iv);
+  },180);
+}
+
+function advance(){
+  if(step<Q.length-1){
+    showStep(step+1);
+    timer=setTimeout(advance, Q[step].es_principal?1800:280);
+  } else {
+    playing=false;
+    document.getElementById('playbtn').textContent='↺ Repetir';
+  }
+}
+
+document.getElementById('playbtn').addEventListener('click',()=>{
+  if(timer)clearTimeout(timer);
+  if(!playing||step>=Q.length-1){
+    step=-1; playing=true;
+    document.getElementById('playbtn').textContent='⏸ Pausar';
+    advance();
+  } else {
+    playing=false; clearTimeout(timer);
+    document.getElementById('playbtn').textContent='▶ Reproducir';
+  }
+});
+
+document.getElementById('slider').addEventListener('input',function(){
+  if(timer)clearTimeout(timer); playing=false;
+  document.getElementById('playbtn').textContent='▶ Reproducir';
+  showStep(Math.round((this.value/100)*(Q.length-1)));
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();document.getElementById('playbtn').click();}
+  if(e.code==='ArrowRight') showStep(step+1);
+  if(e.code==='ArrowLeft')  showStep(step-1);
+});
+
+showStep(0);
+</script>
+</body>
+</html>
